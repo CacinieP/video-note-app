@@ -17,6 +17,8 @@ class ASREngine:
     def __init__(self, config: dict):
         self.cfg = config["asr"]
         self.backend = self.cfg["backend"]
+        self._model = None
+        self._backend_type = None
 
     def transcribe(self, audio_path: str) -> list[ASRSegment]:
         if self.backend == "funasr":
@@ -37,10 +39,13 @@ class ASREngine:
                 "或切换到 faster_whisper 后端: config.yaml -> asr.backend: 'faster_whisper'"
             )
 
-        model_name = self.cfg["funasr"]["model"]
-        device = self.cfg["funasr"]["device"]
+        if self._model is None or self.backend != "funasr":
+            model_name = self.cfg["funasr"]["model"]
+            device = self.cfg["funasr"]["device"]
+            self._model = AutoModel(model=model_name, device=device)
+            self._backend_type = "funasr"
 
-        model = AutoModel(model=model_name, device=device)
+        model = self._model
 
         result = model.generate(
             input=audio_path,
@@ -102,12 +107,15 @@ class ASREngine:
     def _transcribe_faster_whisper(self, audio_path: str) -> list[ASRSegment]:
         from faster_whisper import WhisperModel
 
-        model_size = self.cfg["faster_whisper"]["model_size"]
-        device = self.cfg["faster_whisper"]["device"]
-        compute_type = self.cfg["faster_whisper"]["compute_type"]
+        if self._model is None or self._backend_type != "faster_whisper":
+            model_size = self.cfg["faster_whisper"]["model_size"]
+            device = self.cfg["faster_whisper"]["device"]
+            compute_type = self.cfg["faster_whisper"]["compute_type"]
+            log.info(f"Loading faster-whisper model: {model_size} ({device}/{compute_type})")
+            self._model = WhisperModel(model_size, device=device, compute_type=compute_type)
+            self._backend_type = "faster_whisper"
 
-        log.info(f"Loading faster-whisper model: {model_size} ({device}/{compute_type})")
-        model = WhisperModel(model_size, device=device, compute_type=compute_type)
+        model = self._model
 
         log.info(f"Transcribing: {audio_path}")
         segments_iter, info = model.transcribe(
