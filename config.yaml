@@ -1,0 +1,45 @@
+# Video Note App Configuration
+
+asr:
+  # Backend: "funasr" or "faster_whisper"
+  backend: "faster_whisper"
+  # FunASR settings
+  funasr:
+    model: "iic/SenseVoiceSmall"  # or "iic/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"
+    device: "cuda"  # "cuda" or "cpu"
+  # faster-whisper settings
+  faster_whisper:
+    model_size: "medium"  # tiny, base, small, medium, large-v3
+    device: "cpu"  # "cuda" or "cpu"
+    compute_type: "int8"  # float16, int8
+
+vision:
+  # Use Ollama for local multimodal inference
+  ollama:
+    base_url: "http://localhost:11434"
+    model: "minicpm-v"  # minicpm-v, qwen2-vl, llava
+    timeout: 120
+
+video:
+  # Keyframe extraction
+  keyframe:
+    # Method: "interval" (fixed interval) or "scene" (scene change detection)
+    method: "scene"
+    # For interval method: extract every N seconds
+    interval_sec: 10
+    # For scene method: threshold for scene change (0-1, lower = more sensitive)
+    scene_threshold: 0.3
+    # Max keyframes to extract
+    max_keyframes: 50
+  # Audio extraction
+  audio:
+    sample_rate: 16000
+    format: "wav"
+
+output:
+  # Note format: "markdown" or "json"
+  format: "markdown"
+  # Include timestamps in notes
+  include_timestamps: true
+  # Group notes by time window (seconds)
+  group_window: 30
