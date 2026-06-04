@@ -25,7 +25,7 @@ def main():
 
     pipeline = Pipeline(config)
 
-    for video_path in args.video:
+    for idx, video_path in enumerate(args.video):
         video_path = str(Path(video_path).resolve())
         if not Path(video_path).exists():
             print(f"❌ 文件不存在: {video_path}")
@@ -35,7 +35,9 @@ def main():
         print(f"处理: {video_path}")
         print(f"{'=' * 50}")
 
-        result = pipeline.run(video_path, title=args.title, enable_vision=not args.no_vision)
+        # Only apply --title to the first video; others use filename as title
+        title = args.title if idx == 0 and args.title else ""
+        result = pipeline.run(video_path, title=title, enable_vision=not args.no_vision)
 
         if result["error"]:
             print(f"❌ 处理失败: {result['error']}")

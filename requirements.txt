@@ -1,7 +1,18 @@
+# Core dependencies (required)
 gradio>=4.0
 opencv-python-headless
 numpy
 Pillow
 pyyaml
 requests
-faster-whisper
+
+# ASR backends — choose one or both
+faster-whisper          # default ASR backend
+# funasr                 # optional: FunASR/SenseVoice backend
+# torch                  # required by funasr
+# torchaudio             # required by funasr
+# modelscope             # required by funasr model download
+
+# Dev / CI
+pytest
+flake8

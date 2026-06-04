@@ -82,6 +82,7 @@ class Pipeline:
             if progress_cb:
                 progress_cb(frac, status)
 
+        audio_path = None
         try:
             # Step 1: Extract audio
             _progress(0.05, "提取音频中...")
@@ -97,11 +98,7 @@ class Pipeline:
             if self._stop:
                 raise InterruptedError("用户停止")
 
-            # Clean up temp audio
-            try:
-                os.remove(audio_path)
-            except OSError:
-                pass
+            # Temp audio will be cleaned up in finally block
 
             # Step 3: Extract keyframes
             _progress(0.35, "提取关键帧中...")
@@ -169,6 +166,13 @@ class Pipeline:
             log.exception("Pipeline failed")
             result["error"] = str(e)
             self._status = f"错误: {e}"
+        finally:
+            # Clean up temp audio file
+            if audio_path:
+                try:
+                    os.remove(audio_path)
+                except OSError:
+                    pass
 
         return result
 
@@ -308,7 +312,7 @@ def build_ui(config: dict):
                     )
                     btn_search = gr.Button("搜索", scale=1)
 
-                search_output = gr.Markdown(visible=False)
+                search_output = gr.Markdown(value="*输入关键词后点击搜索*", visible=True)
 
         # ── Progress ───────────────────────────────────────────────
         progress_bar = gr.Slider(
