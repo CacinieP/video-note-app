@@ -3,8 +3,12 @@
 import html
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
+from string import Template
 
 log = logging.getLogger(__name__)
+
+TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
 
 @dataclass
@@ -202,44 +206,37 @@ class NoteGenerator:
 
         safe_note_title = html.escape(note.title)
         safe_full_text = html.escape(note.full_text)
+
+        # Load HTML template from file
+        template_path = TEMPLATES_DIR / "note.html"
+        try:
+            with open(template_path, "r", encoding="utf-8") as f:
+                tmpl = Template(f.read())
+        except FileNotFoundError:
+            log.warning(f"HTML template not found at {template_path}, using inline fallback")
+            return self._to_html_inline(safe_note_title, safe_full_text, sections_html)
+
+        return tmpl.safe_substitute(
+            title=safe_note_title,
+            duration=self._fmt_time(note.duration),
+            section_count=len(note.sections),
+            sections=sections_html,
+            full_text=safe_full_text,
+        )
+
+    @staticmethod
+    def _to_html_inline(safe_note_title, safe_full_text, sections_html):
+        """Minimal inline HTML fallback when template file is unavailable."""
         return f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{safe_note_title} - 视频笔记</title>
-<style>
-:root{{--primary:#4a9eff;--bg:#fafbfc;--card:#fff;--border:#e8ecf0;--text:#1a1a2e;--muted:#6b7280}}
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}}
-.container{{max-width:900px;margin:0 auto;padding:24px}}
-.header{{text-align:center;margin-bottom:32px}}
-.header h1{{font-size:1.8em;color:var(--text)}}
-.header .meta{{color:var(--muted);font-size:0.9em;margin-top:8px}}
-.section{{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin:16px 0;
-  cursor:pointer;transition:all .2s;border-left:4px solid var(--primary)}}
-.section:hover{{box-shadow:0 4px 12px rgba(74,158,255,.15);transform:translateX(2px)}}
-.section-header{{display:flex;align-items:center;gap:12px;margin-bottom:10px}}
-.section-num{{background:var(--primary);color:#fff;border-radius:50%;width:28px;height:28px;display:flex;
-  align-items:center;justify-content:center;font-size:.85em;font-weight:600;flex-shrink:0}}
-.section-header h2{{font-size:1.1em;flex:1}}
-.timestamp{{color:var(--primary);font-size:.85em;white-space:nowrap}}
-.section-text{{color:#374151;line-height:1.8}}
-.vision-card{{background:#f0f7ff;border-radius:8px;padding:10px 14px;margin:8px 0;font-size:.9em;color:#1e40af}}
-.vision-card .icon{{margin-right:4px}}
-.transcript{{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:32px}}
-.transcript h2{{margin-bottom:12px;font-size:1.2em;color:var(--text)}}
-.transcript p{{white-space:pre-wrap;color:#4b5563}}
-.divider{{border:none;border-top:1px solid var(--border);margin:24px 0}}
-.footer{{text-align:center;color:var(--muted);font-size:.8em;margin-top:32px;padding:16px}}
+<title>{safe_note_title} - 视频笔记</title><style>
+body{{font-family:sans-serif;max-width:900px;margin:0 auto;padding:24px;line-height:1.7}}
+.section{{border-left:4px solid #4a9eff;padding:20px;margin:16px 0}}
 </style></head><body>
-<div class="container">
-<div class="header">
-<h1>🎬 {safe_note_title}</h1>
-<div class="meta">时长 {self._fmt_time(note.duration)} · {len(note.sections)} 个章节 · 本地AI生成</div>
-</div>
+<h1>{safe_note_title}</h1>
 {sections_html}
-<hr class="divider">
-<div class="transcript"><h2>📝 完整转写文本</h2><p>{safe_full_text}</p></div>
-<div class="footer">由 视频笔记助手 生成 · 端侧部署 · ASR + 多模态视觉</div>
-</div></body></html>"""
+<h2>完整转写文本</h2><p>{safe_full_text}</p>
+</body></html>"""
 
     @staticmethod
     def _fmt_time(seconds: float) -> str:
